@@ -1,0 +1,14 @@
+[Unit]
+Description=EspoCRM Tunnel setup
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/cloudflared tunnel run 545247f2-4fc4-4293-aac9-bd42b66c67de
+Restart=always
+RestartSec=5
+User=cloudflared
+# Optional: set working directory
+WorkingDirectory=/etc/cloudflared
+
+[Install]
+WantedBy=multi-user.target
