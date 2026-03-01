@@ -329,20 +329,32 @@ app-template:
             #   curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/home/node/.openclaw/bin sh
             # fi
             mkdir -p /home/node/.openclaw/bin
-            # Instalamos kubectl persistente
-            if [ ! -f /home/node/.openclaw/bin/kubectl ]; then
+            # ============================================================
+            # Runtime Dependencies: kubectl
+            # ============================================================
+            
+            # Redirigimos kubectl al PVC para que persista
+            KUBECTL_HOME=/home/node/.openclaw/bin
+            mkdir -p "$KUBECTL_HOME"
+            
+            # Instalamos solo si no existe
+            if [ ! -f "$KUBECTL_HOME/kubectl" ]; then
               log "Installing kubectl..."
+              
+              # Versión estable
               KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-              curl -L -o /home/node/.openclaw/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/arm64/kubectl"
-              chmod +x /home/node/.openclaw/bin/kubectl
-            else
-              log "kubectl already installed"
+              
+              # Descarga directa al PVC
+              curl -L -o "$KUBECTL_HOME/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/arm64/kubectl"
+              
+              # Hacemos ejecutable
+              chmod +x "$KUBECTL_HOME/kubectl"
             fi
-        
-            # Añadimos al PATH
-            export PATH=/home/node/.openclaw/bin:$PATH
-        
-            # Verificamos que kubectl funcione
+            
+            # Lo agregamos al PATH
+            export PATH="$KUBECTL_HOME:$PATH"
+            
+            # Verificamos instalación
             if ! kubectl version --client; then
               log "WARNING: kubectl not functional!"
             fi
