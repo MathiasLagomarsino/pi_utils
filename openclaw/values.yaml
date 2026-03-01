@@ -334,7 +334,7 @@ app-template:
             # ============================================================
             
             # Redirigimos kubectl al PVC para que persista
-            KUBECTL_HOME=/home/node/.openclaw/bin
+            KUBECTL_HOME=/home/node/.openclaw/kubectl
             mkdir -p "$KUBECTL_HOME"
             
             # Instalamos solo si no existe
@@ -345,7 +345,7 @@ app-template:
               KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
               
               # Descarga directa al PVC
-              curl -L -o "$KUBECTL_HOME/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/arm64/kubectl"
+              curl -L -o "$KUBECTL_HOME/kubectl" "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/arm64/kubectl" | env KUBECTL_HOME="$KUBECTL_HOME"
               
               # Hacemos ejecutable
               chmod +x "$KUBECTL_HOME/kubectl"
