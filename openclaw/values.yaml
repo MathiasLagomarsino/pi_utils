@@ -1,0 +1,423 @@
+app-template:
+  chromiumVersion: "124"
+  configMaps:
+    config:
+      data:
+        openclaw.json: "{\n  // Gateway configuration\n  \"gateway\": {\n    \"port\":
+          18789,\n    \"mode\": \"local\",\n    // IMPORTANT: trustedProxies uses
+          exact IP matching only\n    // - CIDR notation is NOT supported - list each
+          proxy IP individually\n    // - IPv6 exact addresses may work but are untested\n
+          \   // - Recommend single-stack IPv4 deployments for simplicity\n    \"trustedProxies\":
+          [\"10.0.0.1\"],\n    \"controlUi\": {\n      \"allowedOrigins\": [\n        \"http://localhost:18789\",\n
+          \       \"http://openclaw.openclaw.svc.cluster.local:18789\",\n        \"http://openclaw:18789\"\n
+          \     ]\n    },\n    \"auth\": {\n      \"token\": \"${GATEWAY_TOKEN}\"\n
+          \   }\n  },\n\n\n  // Browser configuration (Chromium sidecar)\n  \"browser\":
+          {\n    \"enabled\": true,\n    \"defaultProfile\": \"default\",\n    \"profiles\":
+          {\n      \"default\": {\n        \"cdpUrl\": \"http://localhost:9222\",\n
+          \       \"color\": \"#4285F4\"\n      }\n    }\n  },\n\n  // Agent configuration\n
+          \ \"agents\": {\n    \"defaults\": {\n      \"workspace\": \"/home/node/.openclaw/workspace\",\n
+          \     \"model\": {\n        // Uses ANTHROPIC_API_KEY from environment\n
+          \       \"primary\": \"openrouter/free\"\n      },\n      \"userTimezone\":
+          \"UTC\",\n      \"timeoutSeconds\": 600,\n      \"maxConcurrent\": 1\n    },\n
+          \   \"list\": [\n      {\n        \"id\": \"main\",\n        \"default\":
+          true,\n        \"identity\": {\n          \"name\": \"OpenClaw\",\n          \"emoji\":
+          \"\U0001F99E\"\n        }\n      }\n    ]\n  },\n\n  // Session management\n
+          \ \"session\": {\n    \"scope\": \"per-sender\",\n    \"store\": \"/home/node/.openclaw/sessions\",\n
+          \   \"reset\": {\n      \"mode\": \"idle\",\n      \"idleMinutes\": 60\n
+          \   }\n  },\n\n  // Logging\n  \"logging\": {\n    \"level\": \"info\",\n
+          \   \"consoleLevel\": \"info\",\n    \"consoleStyle\": \"compact\",\n    \"redactSensitive\":
+          \"tools\"\n  },\n\n  // Tools configuration\n  \"tools\": {\n    \"profile\":
+          \"full\",\n    \"web\": {\n      \"search\": {\n        \"enabled\": false\n
+          \     },\n      \"fetch\": {\n        \"enabled\": true\n      }\n    }\n
+          \ },\n\n  // Channel configuration can be added here:\n  \"channels\": {\n
+          \   \"telegram\": {\n      \"botToken\": \"${TELEGRAM_BOT_TOKEN}\",\n      \"enabled\":
+          true,\n      \"dmPolicy\": \"allowlist\",\n      \"allowFrom\": [\"${TELEGRAM_ID}\"]\n
+          \   }\n  }\n  //   \"discord\": {\n  //     \"token\": \"${DISCORD_BOT_TOKEN}\"\n
+          \ //   },\n  //   \"slack\": {\n  //     \"botToken\": \"${SLACK_BOT_TOKEN}\",\n
+          \ //     \"appToken\": \"${SLACK_APP_TOKEN}\"\n  //   }\n  // }\n}\n"
+      enabled: true
+  configMode: merge
+  controllers:
+    main:
+      containers:
+        chromium:
+          args:
+          - --headless
+          - --disable-gpu
+          - --no-sandbox
+          - --disable-dev-shm-usage
+          - --remote-debugging-address=0.0.0.0
+          - --remote-debugging-port=9222
+          - --user-data-dir=/tmp/chromium
+          command:
+          - chromium-browser
+          enabled: true
+          env:
+            XDG_CACHE_HOME: /tmp
+          image:
+            repository: zenika/alpine-chrome
+            tag: '{{ .Values.chromiumVersion }}'
+          probes:
+            liveness:
+              custom: true
+              enabled: true
+              spec:
+                failureThreshold: 6
+                initialDelaySeconds: 10
+                periodSeconds: 30
+                tcpSocket:
+                  port: 9222
+                timeoutSeconds: 5
+            readiness:
+              custom: true
+              enabled: true
+              spec:
+                initialDelaySeconds: 5
+                periodSeconds: 10
+                tcpSocket:
+                  port: 9222
+            startup:
+              custom: true
+              enabled: true
+              spec:
+                failureThreshold: 12
+                initialDelaySeconds: 5
+                periodSeconds: 5
+                tcpSocket:
+                  port: 9222
+                timeoutSeconds: 5
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 1Gi
+            requests:
+              cpu: 100m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+        main:
+          args:
+          - gateway
+          - --bind
+          - lan
+          - --port
+          - "18789"
+          command:
+          - node
+          - dist/index.js
+          env: {}
+          envFrom:
+          - secretRef:
+              name: openclaw-env-secret
+          - secretRef:
+              name: openclaw-gateway-auth
+          - secretRef:
+              name: openclaw-telegram
+          - secretRef:
+              name: openclaw-telegram-id
+          image:
+            pullPolicy: IfNotPresent
+            repository: ghcr.io/openclaw/openclaw
+            tag: '{{ .Values.openclawVersion }}'
+          probes:
+            liveness:
+              enabled: true
+              spec:
+                failureThreshold: 3
+                initialDelaySeconds: 30
+                periodSeconds: 30
+                tcpSocket:
+                  port: 18789
+                timeoutSeconds: 5
+              type: TCP
+            readiness:
+              enabled: true
+              spec:
+                failureThreshold: 3
+                initialDelaySeconds: 10
+                periodSeconds: 10
+                tcpSocket:
+                  port: 18789
+                timeoutSeconds: 5
+              type: TCP
+            startup:
+              enabled: true
+              spec:
+                failureThreshold: 30
+                initialDelaySeconds: 5
+                periodSeconds: 5
+                tcpSocket:
+                  port: 18789
+                timeoutSeconds: 5
+              type: TCP
+          resources:
+            limits:
+              cpu: 2000m
+              memory: 2Gi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+      initContainers:
+        init-config:
+          command:
+          - sh
+          - -c
+          - |
+            log() { echo "[$(date -Iseconds)] [init-config] $*"; }
+
+            log "Starting config initialization"
+            mkdir -p /home/node/.openclaw
+            CONFIG_MODE="${CONFIG_MODE:-merge}"
+
+            if [ "$CONFIG_MODE" = "merge" ] && [ -f /home/node/.openclaw/openclaw.json ]; then
+              log "Mode: merge - merging Helm config with existing config"
+              if node -e "
+                const fs = require('fs');
+                // Strip JSON5 single-line comments while preserving // inside strings (e.g. URLs)
+                const stripComments = (s) => {
+                  let r = '', q = false, i = 0;
+                  while (i < s.length) {
+                    if (q) {
+                      if (s[i] === '\\\\') { r += s[i] + s[i+1]; i += 2; continue; }
+                      if (s[i] === '\"') q = false;
+                      r += s[i++];
+                    } else if (s[i] === '\"') {
+                      q = true; r += s[i++];
+                    } else if (s[i] === '/' && s[i+1] === '/') {
+                      while (i < s.length && s[i] !== '\n') i++;
+                    } else { r += s[i++]; }
+                  }
+                  return r;
+                };
+                let existing;
+                try {
+                  existing = JSON.parse(stripComments(fs.readFileSync('/home/node/.openclaw/openclaw.json', 'utf8')));
+                } catch (e) {
+                  console.error('[init-config] Warning: existing config is not valid JSON, will overwrite');
+                  process.exit(1);
+                }
+                const helm = JSON.parse(stripComments(fs.readFileSync('/config/openclaw.json', 'utf8')));
+                const deepMerge = (target, source) => {
+                  for (const key of Object.keys(source)) {
+                    if (source[key] && typeof source[key] === 'object' && !Array.isArray(source[key])) {
+                      target[key] = target[key] || {};
+                      deepMerge(target[key], source[key]);
+                    } else {
+                      target[key] = source[key];
+                    }
+                  }
+                  return target;
+                };
+                const merged = deepMerge(existing, helm);
+                fs.writeFileSync('/home/node/.openclaw/openclaw.json', JSON.stringify(merged, null, 2));
+              "; then
+                log "Config merged successfully"
+              else
+                log "WARNING: Merge failed (existing config may not be valid JSON), falling back to overwrite"
+                cp /config/openclaw.json /home/node/.openclaw/openclaw.json
+              fi
+            else
+              if [ ! -f /home/node/.openclaw/openclaw.json ]; then
+                log "Fresh install - writing initial config"
+              else
+                log "Mode: overwrite - replacing config with Helm values"
+              fi
+              cp /config/openclaw.json /home/node/.openclaw/openclaw.json
+            fi
+            log "Config initialization complete"
+          env:
+            CONFIG_MODE: '{{ .Values.configMode | default "merge" }}'
+          image:
+            repository: ghcr.io/openclaw/openclaw
+            tag: '{{ .Values.openclawVersion }}'
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+        init-skills:
+          command:
+          - sh
+          - -c
+          - |
+            log() { echo "[$(date -Iseconds)] [init-skills] $*"; }
+
+            log "Starting skills initialization"
+
+            # ============================================================
+            # Runtime Dependencies
+            # ============================================================
+            # Some skills require additional runtimes (Python, Go, etc.)
+            # Install them here so they persist across pod restarts.
+            #
+            # Example: Install uv (Python package manager) for Python skills
+            # mkdir -p /home/node/.openclaw/bin
+            # if [ ! -f /home/node/.openclaw/bin/uv ]; then
+            #   log "Installing uv..."
+            #   curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/home/node/.openclaw/bin sh
+            # fi
+            #
+            # Example: Install pnpm and packages for interfaces (e.g., MS Teams)
+            # The read-only filesystem and non-root UID prevent writing to default
+            # pnpm paths (/usr/local/lib/node_modules, ~/.local/share/pnpm, etc.).
+            # Redirect PNPM_HOME to the PVC so the binary persists across restarts.
+            # The init container's HOME=/tmp ensures pnpm's cache, state, and config
+            # writes land on /tmp (writable emptyDir). The store goes on the PVC so
+            # hardlinks work (same filesystem as node_modules) and persist.
+            # PNPM_HOME=/home/node/.openclaw/pnpm
+            # mkdir -p "$PNPM_HOME"
+            # if [ ! -f "$PNPM_HOME/pnpm" ]; then
+            #   log "Installing pnpm..."
+            #   curl -fsSL https://get.pnpm.io/install.sh | env PNPM_HOME="$PNPM_HOME" SHELL=/bin/sh sh -
+            # fi
+            # export PATH="$PNPM_HOME:$PATH"
+            # log "Installing interface dependencies..."
+            # cd /home/node/.openclaw
+            # pnpm install <your-package> --store-dir /home/node/.openclaw/.pnpm-store
+
+            # ============================================================
+            # Skill Installation
+            # ============================================================
+            # Install skills from ClawHub (https://clawhub.com)
+            # Add skill slugs to the list below to install them declaratively.
+            mkdir -p /home/node/.openclaw/workspace/skills
+            cd /home/node/.openclaw/workspace
+            for skill in weather; do
+              if [ -n "$skill" ] && [ ! -d "skills/${skill##*/}" ]; then
+                log "Installing skill: $skill"
+                if ! npx -y clawhub install "$skill" --no-input; then
+                  log "WARNING: Failed to install skill: $skill"
+                fi
+              else
+                log "Skill already installed: $skill"
+              fi
+            done
+            log "Skills initialization complete"
+          env:
+            HOME: /tmp
+            NPM_CONFIG_CACHE: /tmp/.npm
+          image:
+            repository: ghcr.io/openclaw/openclaw
+            tag: '{{ .Values.openclawVersion }}'
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+              - ALL
+            readOnlyRootFilesystem: true
+            runAsGroup: 1000
+            runAsNonRoot: true
+            runAsUser: 1000
+      replicas: 1
+      strategy: Recreate
+  defaultPodOptions:
+    securityContext:
+      fsGroup: 1000
+      fsGroupChangePolicy: OnRootMismatch
+  ingress:
+    main:
+      enabled: false
+  networkpolicies:
+    main:
+      controller: main
+      enabled: false
+      policyTypes:
+      - Ingress
+      - Egress
+      rules:
+        egress:
+        - ports:
+          - port: 53
+            protocol: UDP
+          - port: 53
+            protocol: TCP
+          to:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: kube-system
+            podSelector:
+              matchLabels:
+                k8s-app: kube-dns
+        - to:
+          - ipBlock:
+              cidr: 0.0.0.0/0
+              except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
+              - 169.254.0.0/16
+              - 100.64.0.0/10
+        ingress:
+        - from:
+          - namespaceSelector:
+              matchLabels:
+                kubernetes.io/metadata.name: gateway-system
+          ports:
+          - port: 18789
+            protocol: TCP
+  openclawVersion: 2026.2.26
+  persistence:
+    config:
+      advancedMounts:
+        main:
+          init-config:
+          - path: /config
+            readOnly: true
+      enabled: true
+      identifier: config
+      type: configMap
+    data:
+      accessMode: ReadWriteOnce
+      advancedMounts:
+        main:
+          init-config:
+          - path: /home/node/.openclaw
+          init-skills:
+          - path: /home/node/.openclaw
+          main:
+          - path: /home/node/.openclaw
+      enabled: true
+      size: 5Gi
+      type: persistentVolumeClaim
+    tmp:
+      advancedMounts:
+        main:
+          chromium:
+          - path: /tmp
+          init-config:
+          - path: /tmp
+          init-skills:
+          - path: /tmp
+          main:
+          - path: /tmp
+      enabled: true
+      type: emptyDir
+  service:
+    main:
+      controller: main
+      ipFamilies:
+      - IPv4
+      ipFamilyPolicy: SingleStack
+      ports:
+        http:
+          port: 18789
