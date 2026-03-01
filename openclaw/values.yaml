@@ -328,6 +328,11 @@ app-template:
             #   log "Installing uv..."
             #   curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/home/node/.openclaw/bin sh
             # fi
+            mkdir -p /home/node/.openclaw/bin
+            if [ ! -f /home/node/.openclaw/bin/kubectl ]; then
+              log "Installing kubectl..."
+              curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl" | env KUBECTL_INSTALL_DIR=/home/node/.openclaw/bin sh
+            fi
             #
             # Example: Install pnpm and packages for interfaces (e.g., MS Teams)
             # The read-only filesystem and non-root UID prevent writing to default
