@@ -1,93 +1,93 @@
 app-template:
   chromiumVersion: "124"
   configMaps:
-  config:
-    enabled: true
-    data:
-      openclaw.json: |
-        {
-          "gateway": {
-            "port": 18789,
-            "mode": "local",
-            "trustedProxies": ["10.0.0.1"],
-            "controlUi": {
-              "allowedOrigins": [
-                "http://localhost:18789",
-                "http://openclaw.openclaw.svc.cluster.local:18789",
-                "http://openclaw:18789"
-              ]
-            },
-            "auth": {
-              "token": "${GATEWAY_TOKEN}"
-            }
-          },
-
-          "browser": {
-            "enabled": true,
-            "defaultProfile": "default",
-            "profiles": {
-              "default": {
-                "cdpUrl": "http://localhost:9222",
-                "color": "#4285F4"
-              }
-            }
-          },
-
-          "agents": {
-            "defaults": {
-              "workspace": "/home/node/.openclaw/workspace",
-              "model": {
-                "primary": "openrouter/free"
+    config:
+      enabled: true
+      data:
+        openclaw.json: |
+          {
+            "gateway": {
+              "port": 18789,
+              "mode": "local",
+              "trustedProxies": ["10.0.0.1"],
+              "controlUi": {
+                "allowedOrigins": [
+                  "http://localhost:18789",
+                  "http://openclaw.openclaw.svc.cluster.local:18789",
+                  "http://openclaw:18789"
+                ]
               },
-              "userTimezone": "UTC",
-              "timeoutSeconds": 600,
-              "maxConcurrent": 1
+              "auth": {
+                "token": "${GATEWAY_TOKEN}"
+              }
             },
-            "list": [
-              {
-                "id": "main",
-                "default": true,
-                "identity": {
-                  "name": "OpenClaw",
-                  "emoji": "🦞"
+  
+            "browser": {
+              "enabled": true,
+              "defaultProfile": "default",
+              "profiles": {
+                "default": {
+                  "cdpUrl": "http://localhost:9222",
+                  "color": "#4285F4"
                 }
               }
-            ]
-          },
-
-          "session": {
-            "scope": "per-sender",
-            "store": "/home/node/.openclaw/sessions",
-            "reset": {
-              "mode": "idle",
-              "idleMinutes": 60
-            }
-          },
-
-          "logging": {
-            "level": "info",
-            "consoleLevel": "info",
-            "consoleStyle": "compact",
-            "redactSensitive": "tools"
-          },
-
-          "tools": {
-            "profile": "full",
-            "web": {
-              "search": { "enabled": false },
-              "fetch": { "enabled": true }
-            }
-          },
-
-          "channels": {
-            "telegram": {
-              "enabled": true,
-              "botToken": "${TELEGRAM_BOT_TOKEN}",
-              "dmPolicy": "allowlist",
-              "allowFrom": ["${TELEGRAM_ID}"]
+            },
+  
+            "agents": {
+              "defaults": {
+                "workspace": "/home/node/.openclaw/workspace",
+                "model": {
+                  "primary": "openrouter/free"
+                },
+                "userTimezone": "UTC",
+                "timeoutSeconds": 600,
+                "maxConcurrent": 1
+              },
+              "list": [
+                {
+                  "id": "main",
+                  "default": true,
+                  "identity": {
+                    "name": "OpenClaw",
+                    "emoji": "🦞"
+                  }
+                }
+              ]
+            },
+  
+            "session": {
+              "scope": "per-sender",
+              "store": "/home/node/.openclaw/sessions",
+              "reset": {
+                "mode": "idle",
+                "idleMinutes": 60
+              }
+            },
+  
+            "logging": {
+              "level": "info",
+              "consoleLevel": "info",
+              "consoleStyle": "compact",
+              "redactSensitive": "tools"
+            },
+  
+            "tools": {
+              "profile": "full",
+              "web": {
+                "search": { "enabled": false },
+                "fetch": { "enabled": true }
+              }
+            },
+  
+            "channels": {
+              "telegram": {
+                "enabled": true,
+                "botToken": "${TELEGRAM_BOT_TOKEN}",
+                "dmPolicy": "allowlist",
+                "allowFrom": ["${TELEGRAM_ID}"]
+              }
             }
           }
-        }
   configMode: merge
   controllers:
     main:
