@@ -330,19 +330,10 @@ app-template:
             # fi
             mkdir -p /home/node/.openclaw/bin
 
-            if [ ! -f /home/node/.openclaw/bin/kubectl ]; then
-              log "Installing kubectl..."
-              # Establecemos versión estable
-              KUBECTL_VERSION=$(curl -L -s https://dl.k8s.io/release/stable.txt)
-              # Descargamos directo al directorio destino
-              curl -L -o /home/node/.openclaw/bin/kubectl "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/arm64/kubectl"
-              # Hacemos ejecutable
-              chmod +x /home/node/.openclaw/bin/kubectl
-            fi
-            # Aseguramos que esté en PATH
-            export PATH=/home/node/.openclaw/bin:$PATH
-            # Verificamos
-            kubectl version --client || log "kubectl not installed correctly"
+            mkdir -p /tmp/bin
+            curl -L -o /tmp/bin/kubectl "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/arm64/kubectl"
+            chmod +x /tmp/bin/kubectl
+            export PATH=/tmp/bin:$PATH
             #
             # Example: Install pnpm and packages for interfaces (e.g., MS Teams)
             # The read-only filesystem and non-root UID prevent writing to default
