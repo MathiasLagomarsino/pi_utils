@@ -216,6 +216,8 @@ app-template:
             requests:
               cpu: 200m
               memory: 512Mi
+          podSecurityContext:
+            fsGroup: 1000
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
