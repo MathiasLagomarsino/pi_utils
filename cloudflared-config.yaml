@@ -1,0 +1,9 @@
+tunnel: 545247f2-4fc4-4293-aac9-bd42b66c67de
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: crm.miryanfigueredocoach.com
+    service: http://espocrm.default.svc.cluster.local:8080
+    originRequest:
+      httpHostHeader: espocrm.default.svc.cluster.local
+  - service: http_status:404

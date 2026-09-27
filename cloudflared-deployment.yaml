@@ -1,0 +1,57 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cloudflared
+  namespace: kube-system
+  labels:
+    app: cloudflared
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cloudflared
+  template:
+    metadata:
+      labels:
+        app: cloudflared
+    spec:
+      initContainers:
+        # This ensures /etc/cloudflared exists before mounting the secret file
+        - name: init-create-dir
+          image: busybox
+          command: ["sh", "-c", "mkdir -p /etc/cloudflared"]
+          volumeMounts:
+            - name: etcdir
+              mountPath: /etc/cloudflared
+      containers:
+        - name: cloudflared
+          image: cloudflare/cloudflared:latest
+          args: ["tunnel", "--no-autoupdate", "run", "545247f2-4fc4-4293-aac9-bd42b66c67de"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          volumeMounts:
+            # Base /etc/cloudflared directory
+            - name: etcdir
+              mountPath: /etc/cloudflared
+            # Mount config.yaml from ConfigMap
+            - name: config
+              mountPath: /etc/cloudflared/config.yaml
+              subPath: config.yaml
+            # Mount credentials.json from Secret
+            - name: creds
+              mountPath: /etc/cloudflared/credentials.json
+              subPath: credentials.json
+      volumes:
+        - name: etcdir
+          emptyDir: {}
+        - name: config
+          configMap:
+            name: cloudflared-config
+        - name: creds
+          secret:
+            secretName: cloudflared-credentials
