@@ -6,4 +6,8 @@ ingress:
     service: http://espocrm.default.svc.cluster.local:8080
     originRequest:
       httpHostHeader: espocrm.default.svc.cluster.local
+
+  - hostname: mealendary.com
+    service: http://mealendary.mealendary.svc.cluster.local:80
+
   - service: http_status:404
