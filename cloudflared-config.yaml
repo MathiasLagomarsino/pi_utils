@@ -14,7 +14,7 @@ data:
         originRequest:
           httpHostHeader: espocrm.default.svc.cluster.local
 
-      - hostname: mealendary.com
-        service: http://mealendary.mealendary.svc.cluster.local:80
+      - hostname: api.mealendary.com
+        service: http://mealendary-backend.mealendary.svc.cluster.local:3001
 
       - service: http_status:404
