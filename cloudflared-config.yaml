@@ -1,13 +1,20 @@
-tunnel: 545247f2-4fc4-4293-aac9-bd42b66c67de
-credentials-file: /etc/cloudflared/credentials.json
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudflared-config
+  namespace: default
+data:
+  config.yaml: |
+    tunnel: 545247f2-4fc4-4293-aac9-bd42b66c67de
+    credentials-file: /etc/cloudflared/credentials.json
 
-ingress:
-  - hostname: crm.miryanfigueredocoach.com
-    service: http://espocrm.default.svc.cluster.local:8080
-    originRequest:
-      httpHostHeader: espocrm.default.svc.cluster.local
+    ingress:
+      - hostname: crm.miryanfigueredocoach.com
+        service: http://espocrm.default.svc.cluster.local:8080
+        originRequest:
+          httpHostHeader: espocrm.default.svc.cluster.local
 
-  - hostname: mealendary.com
-    service: http://mealendary.mealendary.svc.cluster.local:80
+      - hostname: mealendary.com
+        service: http://mealendary.mealendary.svc.cluster.local:80
 
-  - service: http_status:404
+      - service: http_status:404
